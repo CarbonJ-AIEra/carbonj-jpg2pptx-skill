@@ -1,7 +1,7 @@
 ---
 name: carbonj-jpg2pptx-skill
 description: 将 JPG、JPEG、PNG、网页截图、海报或信息图 1:1 重建为可编辑 PPTX。用户只要提到“图片转 PPT/PPTX”“jpg2pptx”“截图变成可编辑幻灯片”“1:1 复刻图片到 PowerPoint”“保留文字大小、颜色、UI、图标和版式”，就应使用本 Skill，即使用户没有明确说出 Skill 名称。以 PptxGenJS 为核心，把文字、色块、线条、编号和简单图标重建为 PowerPoint 原生对象；复杂图标、照片与纹理拆成独立可替换图片对象；完成内容、结构、溢出和渲染对照检查后，把最终 PPTX 放到用户指定目录或 Downloads。
-compatibility: Requires the pptx skill, PptxGenJS, ffmpeg/ffprobe, Tesseract when OCR is useful, LibreOffice or a PowerPoint renderer for QA, and Python with python-pptx for editability checks.
+compatibility: Requires the pptx skill, PptxGenJS, @napi-rs/canvas for preflight text measurement, ffmpeg/ffprobe, Tesseract when OCR is useful, Microsoft PowerPoint when available for primary QA, LibreOffice for secondary rendering QA, and Python with python-pptx for editability checks.
 ---
 
 # CarbonJ JPG to Editable PPTX
@@ -18,6 +18,7 @@ compatibility: Requires the pptx skill, PptxGenJS, ffmpeg/ffprobe, Tesseract whe
 - 复杂图标、照片、反射、纹理可保留为独立、可移动、可缩放、可替换的图片对象。
 - 不用一张铺满全页的参考图伪装“可编辑”。如需临时对照，可在构建阶段使用参考图，但最终版本必须移除。
 - 最终文件能正常打开，通过结构验证，无文字越界，并经过逐页渲染检查。
+- 最终 PPTX 不包含 `normAutofit` 或 `spAutoFit` 等延迟自动适配标记；在 Microsoft PowerPoint 中打开后换行和字号不发生变化。
 - 最终文件保存到用户指定目录；用户只说 Download/下载目录时，默认使用 `~/Downloads`。
 
 ## 开始前
@@ -112,9 +113,17 @@ NODE_PATH="<node_modules>" node scripts/build_from_spec.cjs scene.json
 
 - 优先识别并使用原图字体；本机没有时选择字宽和字重最接近的字体。
 - 需要稳定渲染时优先 Arial、Calibri、Cambria、Times New Roman 等 Office 安全字体。
-- 文字框预留约 5%–10% 宽度，避免 PowerPoint 与 LibreOffice 字体度量差异造成换行。
+- 文字框至少预留 12% 宽高余量；数字百分比、短标签和单行标题建议预留 15%–18%。
 - 原图中人为控制的换行应显式写入文本，而不是依赖自动换行碰运气。
 - 多行正文逐行核对，不因 OCR 识别错误擅自改写内容。
+
+#### PowerPoint 文字安全硬规则
+
+- 最终文件禁止使用 `fit: "shrink"` 和 `fit: "resize"`。PptxGenJS 只能写入自动适配标记，无法触发 PowerPoint 立即完成适配；LibreOffice 的正常预览可能掩盖问题。
+- 文本统一使用 `fit: "none"`，字号必须在生成前计算并固化。
+- 单行文字默认 `wrap: false`；多行文字按原图显式写入 `\n`，不要依赖文本框自动换行。
+- 使用通用构建器时会生成 `.text-safety.json`，检查每个文本框的宽度、行数、宽高占用率和最终字号。出现 `autoDownsized: true` 时必须与原图复核。
+- 专用构建脚本也必须使用相同策略：先测量、再设置固定字号，不得用 Office 自动缩放作为补救。
 
 ### 7. QA：结构、内容、视觉
 
@@ -123,14 +132,16 @@ NODE_PATH="<node_modules>" node scripts/build_from_spec.cjs scene.json
 1. 用 `markitdown` 提取文本；不可用时用 `python-pptx` 逐个文本框提取。核对遗漏、拼写和顺序。
 2. 运行 `pptx` Skill 的 `scripts/office/validate.py`。若系统 Python 太旧，切换到 Python 3.10+；不要把运行环境错误误报成 PPTX 损坏。
 3. 运行 `scripts/check_editability.py <deck.pptx>`，确认幻灯片、对象、文本和图片数量合理。
-4. 用 `pptx` Skill 的 `scripts/office/soffice.py` 转 PDF，再用 `pdftoppm` 生成逐页 PNG。
-5. 逐页以完整尺寸查看渲染图，对照原图检查：
+4. 运行 `scripts/check_powerpoint_text_safety.py <deck.pptx>`；发现延迟自动适配标记时必须失败并返工。
+5. 用 `pptx` Skill 的 `scripts/office/soffice.py` 转 PDF，再用 `pdftoppm` 生成逐页 PNG。LibreOffice 结果只作为辅助，不代表 PowerPoint 一定安全。
+6. 可操作 Microsoft PowerPoint 时，必须在 PowerPoint 中实际打开文件并截图验收；重点检查百分号、数字、标题、窄栏正文和页脚。若当前环境不能操作 PowerPoint，应明确说明只完成了严格静态预检。
+7. 逐页以完整尺寸查看渲染图，对照原图检查：
    - 字体大小、字重、行距和换行；
    - 斜切边、色块边界、图标中心点；
    - 遮挡顺序、阴影方向和裁切；
    - 透明图片周围是否出现矩形底色或白边；
    - 标题、网址和底部元素是否越界。
-6. 修正后重新生成、重新验证、重新渲染。不要只检查脚本语法就宣称完成。
+8. 修正后重新生成、重新验证、重新渲染。不要只检查脚本语法或 LibreOffice 预览就宣称完成。
 
 视觉相似度可用 `scripts/compare_render.py <source> <render>` 计算辅助指标，但数字不能替代肉眼检查；字体抗锯齿和渲染器差异会影响像素分数。
 
@@ -157,4 +168,3 @@ NODE_PATH="<node_modules>" node scripts/build_from_spec.cjs scene.json
 - `references/spec-schema.md`：场景规范字段和示例。
 - `references/case-study.md`：TinyPPT 信息图复刻中验证有效的拆解方法与问题修正。
 - `examples/basic-scene.json`：可运行的最小示例。
-

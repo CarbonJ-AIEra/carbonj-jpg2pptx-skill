@@ -18,7 +18,12 @@
       "prompt": "Convert this portrait PNG poster into an editable PowerPoint slide. Keep the exact line breaks and colors, isolate the logo as a replaceable object, and save the final .pptx next to the source image.",
       "expected_output": "A portrait PPTX with correct custom slide ratio, editable text and shapes, a separate logo image, and successful validation/render QA.",
       "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "把这张 stablecoin 报告 PNG 转成可编辑 PPTX。之前版本在 PowerPoint 中把 28%、23%、16%、42% 拆行，标题逐词换行，正文压到页脚；请修复并保证在 PowerPoint 首次打开时版式不变。",
+      "expected_output": "A one-slide editable PPTX with fixed precomputed text sizes, explicit source line breaks, no delayed auto-fit XML markers, no overlap with the footer, and a PowerPoint-first QA result.",
+      "files": ["/Users/carbonj/Downloads/04-.png"]
     }
   ]
 }
-

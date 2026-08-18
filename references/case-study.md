@@ -38,7 +38,12 @@ The initial builder executed successfully, but the first render showed clipped l
 
 General lesson: successful script execution and valid XML are necessary but not sufficient. Always render and inspect the actual slide.
 
+### LibreOffice looked correct but PowerPoint reflowed the text
+
+A stablecoin infographic passed LibreOffice rendering, yet Microsoft PowerPoint split `28%`, `23%`, `16%`, `42%` and `28%` across lines, wrapped the main title word by word, and pushed body text into the footer. The deck relied on PptxGenJS `fit: "shrink"`. PptxGenJS can write that setting but cannot trigger PowerPoint's delayed auto-fit calculation, so the first real PowerPoint render used the authored font size and reflowed the slide.
+
+General lesson: never use Office auto-fit as final layout logic. Measure text before generation, use `fit: "none"`, disable wrapping for single-line metrics, encode every intended line break, keep 12%–18% spare width, and reject PPTX files containing `normAutofit` or `spAutoFit`. LibreOffice is secondary QA; actual PowerPoint is the compatibility target.
+
 ## Final object model
 
 The validated slide contained 47 selectable objects, including 22 text objects and multiple independently replaceable source-derived images. This is a useful sanity range for a moderately complex single-page infographic; a one-object slide would have been a flattened image, not an editable reconstruction.
-

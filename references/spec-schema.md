@@ -23,6 +23,11 @@
     "headFontFace": "Arial",
     "bodyFontFace": "Arial"
   },
+  "textSafety": {
+    "safetyFactor": 0.88,
+    "minFontSizePt": 6,
+    "lineHeight": 1.18
+  },
   "elements": [],
   "notes": "[Sources]\n- User-provided image ...\n[/Sources]"
 }
@@ -50,9 +55,15 @@
   "valign": "top",
   "margin": 0,
   "charSpacing": 0.4,
-  "fit": "shrink"
+  "wrap": false,
+  "lineSpacingPt": 48,
+  "safetyFactor": 0.88,
+  "minFontSizePt": 30,
+  "allowAutoDownsize": true
 }
 ```
+
+The builder always emits `fit: "none"`; `fit: "shrink"` and `fit: "resize"` are intentionally unsupported because they behave differently before and after text is edited in Microsoft PowerPoint. `wrap` defaults to `false`. Use explicit `\n` characters to match the source line breaks. The builder measures text before writing and records the result in a sibling `.text-safety.json` report.
 
 For multicolor text, replace `text` with `runs`:
 
@@ -128,4 +139,3 @@ Relative image paths resolve from the JSON file directory. Preserve the asset's 
 ## Z-order
 
 Elements are added in array order. Put background decorations first and foreground objects last. This is especially important for diagonal bands, shadows, text labels and extracted icons.
-

@@ -2,6 +2,12 @@
 const fs = require('fs');
 const path = require('path');
 const PptxGenJS = require('pptxgenjs');
+let createCanvas;
+try {
+  ({ createCanvas } = require('@napi-rs/canvas'));
+} catch (_) {
+  // Text measurement remains optional so the builder can still run in a minimal Node environment.
+}
 
 function fail(message) {
   console.error(`ERROR: ${message}`);
@@ -65,6 +71,55 @@ const slideW = Number(spec.canvas.slideWidthIn || (landscape ? 13.333333 : 7.5 *
 const slideH = Number(spec.canvas.slideHeightIn || (landscape ? slideW * sourceH / sourceW : 7.5));
 const sx = (n) => Number(n || 0) / sourceW * slideW;
 const sy = (n) => Number(n || 0) / sourceH * slideH;
+const sourcePxPerPt = sourceW / slideW / 72;
+const textSafetyReport = [];
+
+function textLines(element) {
+  if (Array.isArray(element.runs)) {
+    let combined = '';
+    for (const run of element.runs) {
+      combined += String(run.text || '');
+      if (run.breakLine || run.options?.breakLine) combined += '\n';
+    }
+    return combined.replace(/\n$/, '').split('\n');
+  }
+  return String(element.text || '').split('\n');
+}
+
+function safeFontSize(element, name, requestedPt, fontFace) {
+  const lines = textLines(element);
+  const safetyFactor = Number(element.safetyFactor || spec.textSafety?.safetyFactor || 0.88);
+  const minPt = Number(element.minFontSizePt || spec.textSafety?.minFontSizePt || 6);
+  const allowAutoDownsize = element.allowAutoDownsize !== false;
+  const lineHeight = Number(element.lineHeight || spec.textSafety?.lineHeight || 1.18);
+  let widthRatio = 0;
+
+  if (createCanvas) {
+    const ctx = createCanvas(16, 16).getContext('2d');
+    const weight = element.bold ? '700' : '400';
+    const style = element.italic ? 'italic' : 'normal';
+    ctx.font = `${style} ${weight} ${requestedPt * sourcePxPerPt}px "${fontFace}"`;
+    for (const line of lines) {
+      widthRatio = Math.max(widthRatio, ctx.measureText(line).width / Math.max(1, Number(element.w)));
+    }
+  }
+
+  const heightRatio = lines.length * requestedPt * sourcePxPerPt * lineHeight / Math.max(1, Number(element.h));
+  const limitingRatio = Math.max(widthRatio, heightRatio);
+  let chosenPt = requestedPt;
+  if (limitingRatio > safetyFactor) {
+    chosenPt = Math.max(minPt, requestedPt * safetyFactor / limitingRatio);
+    if (!allowAutoDownsize) {
+      fail(`${name} exceeds its text box (ratio ${limitingRatio.toFixed(2)} > ${safetyFactor}); enlarge the box or lower fontSizePt`);
+    }
+  }
+  textSafetyReport.push({
+    name, requestedPt, chosenPt: Number(chosenPt.toFixed(2)), lines: lines.length,
+    widthRatio: Number(widthRatio.toFixed(3)), heightRatio: Number(heightRatio.toFixed(3)),
+    safetyFactor, autoDownsized: chosenPt < requestedPt - 0.01,
+  });
+  return chosenPt;
+}
 
 const pptx = new PptxGenJS();
 pptx.defineLayout({ name: 'SOURCE_RATIO', width: slideW, height: slideH });
@@ -91,16 +146,23 @@ for (const [index, element] of (spec.elements || []).entries()) {
   };
 
   if (element.type === 'text') {
+    const fontFace = element.fontFace || spec.theme?.bodyFontFace || 'Arial';
+    const requestedPt = Number(element.fontSizePt || 18);
+    const chosenPt = safeFontSize(element, name, requestedPt, fontFace);
+    const runScale = chosenPt / requestedPt;
     const options = {
       ...common,
-      fontFace: element.fontFace || spec.theme?.bodyFontFace || 'Arial',
-      fontSize: Number(element.fontSizePt || 18),
+      fontFace,
+      fontSize: chosenPt,
       color: cleanHex(element.color || '000000', `${name}.color`),
       bold: Boolean(element.bold), italic: Boolean(element.italic),
       align: element.align || 'left', valign: element.valign || 'top',
       margin: element.margin == null ? 0 : clone(element.margin),
       breakLine: false,
-      fit: element.fit || 'shrink',
+      fit: 'none',
+      wrap: element.wrap == null ? false : Boolean(element.wrap),
+      isTextBox: true,
+      lineSpacing: element.lineSpacingPt == null ? undefined : Number(element.lineSpacingPt),
       charSpacing: element.charSpacing == null ? undefined : Number(element.charSpacing),
       shadow: normalizeShadow(element.shadow),
     };
@@ -112,7 +174,8 @@ for (const [index, element] of (spec.elements || []).entries()) {
           ...(run.bold != null ? { bold: Boolean(run.bold) } : {}),
           ...(run.italic != null ? { italic: Boolean(run.italic) } : {}),
           ...(run.fontFace ? { fontFace: run.fontFace } : {}),
-          ...(run.fontSizePt ? { fontSize: Number(run.fontSizePt) } : {}),
+          ...(run.fontSizePt ? { fontSize: Number(run.fontSizePt) * runScale } : {}),
+          ...((run.breakLine || run.options?.breakLine) ? { breakLine: true } : {}),
         },
       }));
       slide.addText(runs, options);
@@ -163,7 +226,10 @@ fs.mkdirSync(path.dirname(output), { recursive: true });
 
 (async () => {
   await pptx.writeFile({ fileName: output, compression: true });
+  const reportPath = output.replace(/\.pptx$/i, '.text-safety.json');
+  fs.writeFileSync(reportPath, `${JSON.stringify(textSafetyReport, null, 2)}\n`);
   console.log(output);
+  console.log(reportPath);
 })().catch((error) => {
   console.error(error);
   process.exit(1);

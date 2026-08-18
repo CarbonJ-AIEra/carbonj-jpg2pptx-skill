@@ -52,6 +52,8 @@ cp -R carbonj-jpg2pptx-skill ~/.codex/skills/carbonj-jpg2pptx-skill
 
 重新打开 Codex 任务后即可调用。
 
+或者把地址给到codex：https://github.com/CarbonJ-AIEra/carbonj-jpg2pptx-skill.git
+
 主要依赖：
 
 - `pptx` Skill

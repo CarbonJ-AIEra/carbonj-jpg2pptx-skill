@@ -1,0 +1,105 @@
+{
+  "canvas": {
+    "widthPx": 1600,
+    "heightPx": 900
+  },
+  "background": "EFF2EB",
+  "output": "./basic-scene-output.pptx",
+  "metadata": {
+    "title": "JPG2PPTX smoke test",
+    "author": "CarbonJ",
+    "lang": "zh-CN"
+  },
+  "theme": {
+    "headFontFace": "Arial",
+    "bodyFontFace": "Arial"
+  },
+  "elements": [
+    {
+      "type": "rect",
+      "name": "Coral panel",
+      "x": 800,
+      "y": 160,
+      "w": 800,
+      "h": 220,
+      "fill": "FF503D",
+      "shadow": {
+        "type": "outer",
+        "color": "000000",
+        "opacity": 0.2,
+        "blur": 5,
+        "offset": 3,
+        "angle": 90
+      }
+    },
+    {
+      "type": "parallelogram",
+      "name": "Editable step",
+      "x": 610,
+      "y": 160,
+      "w": 380,
+      "h": 220,
+      "fill": "F75A43"
+    },
+    {
+      "type": "text",
+      "name": "Step number",
+      "x": 670,
+      "y": 190,
+      "w": 200,
+      "h": 100,
+      "text": "01",
+      "fontFace": "Arial",
+      "fontSizePt": 52,
+      "bold": true,
+      "color": "FFFFFF",
+      "align": "center",
+      "valign": "mid"
+    },
+    {
+      "type": "text",
+      "name": "Panel heading",
+      "x": 1030,
+      "y": 205,
+      "w": 400,
+      "h": 60,
+      "text": "INFOGRAPHICS",
+      "fontFace": "Arial",
+      "fontSizePt": 22,
+      "color": "FFFFFF"
+    },
+    {
+      "type": "text",
+      "name": "Panel paragraph",
+      "x": 1030,
+      "y": 270,
+      "w": 430,
+      "h": 95,
+      "text": "Editable text, native shapes,\nand independently replaceable images.",
+      "fontFace": "Arial",
+      "fontSizePt": 13,
+      "color": "FFFFFF"
+    },
+    {
+      "type": "text",
+      "name": "Multicolor PowerPoint title",
+      "x": 740,
+      "y": 630,
+      "w": 600,
+      "h": 100,
+      "fontFace": "Arial",
+      "fontSizePt": 40,
+      "align": "center",
+      "valign": "mid",
+      "runs": [
+        {"text": "P", "color": "202020"},
+        {"text": "O", "color": "FF0000"},
+        {"text": "WERP", "color": "202020"},
+        {"text": "O", "color": "7FBE00"},
+        {"text": "INT", "color": "202020"}
+      ]
+    }
+  ],
+  "notes": "[Sources]\n- Synthetic smoke-test scene included with carbonj-jpg2pptx-skill.\n[/Sources]"
+}
+

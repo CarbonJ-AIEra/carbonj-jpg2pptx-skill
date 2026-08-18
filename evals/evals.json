@@ -1,0 +1,24 @@
+{
+  "skill_name": "carbonj-jpg2pptx-skill",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "把我提供的 16:9 信息图 JPG 1:1 复刻成可编辑 PPTX。所有文字必须可编辑，复杂图标可以作为独立图片对象，输出到 Downloads，并完成结构验证和渲染检查。",
+      "expected_output": "A one-slide editable PPTX in Downloads with native text and shapes, independent image objects for complex artwork, and QA evidence.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "这张中文产品 UI 截图帮我转成 PPT，不要整张图片铺底。按钮、卡片、标题和正文都要能改，头像和产品照片可以单独保留为图片。",
+      "expected_output": "An editable PPTX that separates UI geometry and text from raster assets and preserves the screenshot aspect ratio.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "Convert this portrait PNG poster into an editable PowerPoint slide. Keep the exact line breaks and colors, isolate the logo as a replaceable object, and save the final .pptx next to the source image.",
+      "expected_output": "A portrait PPTX with correct custom slide ratio, editable text and shapes, a separate logo image, and successful validation/render QA.",
+      "files": []
+    }
+  ]
+}
+
